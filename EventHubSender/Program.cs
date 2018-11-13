@@ -50,10 +50,10 @@ namespace EventHubSender
 
     class Program
     {
-        
         static readonly string connectionString = Environment.GetEnvironmentVariable("E2E_DIAGNOSTICS_EVENT_HUB_CONNECTION_STRING", EnvironmentVariableTarget.User);
         static readonly string eventHubName = "insights-logs-e2ediagnostics";
         static string[] endpointNames = new string[] { "myEndpoint1", "myEndpoint2", "myEndpoint3" };
+        static string[] deviceNames = new string[] { "myDevice1", "myDevice2", "myDevice3" };
         static Random random = new Random();
 
         static void Main(string[] args)
@@ -62,7 +62,7 @@ namespace EventHubSender
             SendingRandomMessages();
         }
 
-        static Record GenerateD2CLogs(string spanId)
+        static Record GenerateD2CLogs(string spanId, string deviceName)
         {
             var record = new Record();
             record.operationName = "DiagnosticIoTHubD2C";
@@ -71,7 +71,8 @@ namespace EventHubSender
 
             var callerDateTime = DateTime.Now.ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'");
             var calleeDateTime = (DateTime.Now.AddMilliseconds(random.Next(500, 1000))).ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'");
-            record.properties = $"{{\"messageSize\":\"1000\",\"deviceId\":\"myDevice\",\"callerLocalTimeUtc\":\"{callerDateTime}\",\"calleeLocalTimeUtc\":\"{calleeDateTime}\"}}";
+
+            record.properties = $"{{\"messageSize\":\"1000\",\"deviceId\":\"{deviceName}\",\"callerLocalTimeUtc\":\"{callerDateTime}\",\"calleeLocalTimeUtc\":\"{calleeDateTime}\"}}";
             return record;
         }
 
@@ -106,7 +107,8 @@ namespace EventHubSender
                 var bytes = new byte[8];
                 random.NextBytes(bytes);
                 var spanId = ByteArrayToHexStringConverter.Convert(bytes);
-                var d2cLog = GenerateD2CLogs(spanId);
+                var randDeviceName = deviceNames[random.Next(deviceNames.Length)];
+                var d2cLog = GenerateD2CLogs(spanId, randDeviceName);
                 var ingressLog = GenerateIngressLogs(spanId);
 
                 eventhubMessage.records.Add(d2cLog);
