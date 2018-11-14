@@ -41,6 +41,7 @@ namespace EventHubSender
         public string durationMs;
         public string correlationId;
         public string properties;
+        public string level = "Information";
     }
 
     class EventHubMessage
@@ -71,8 +72,14 @@ namespace EventHubSender
 
             var callerDateTime = DateTime.Now.ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'");
             var calleeDateTime = (DateTime.Now.AddMilliseconds(random.Next(500, 1000))).ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'");
-
+            
             record.properties = $"{{\"messageSize\":\"1000\",\"deviceId\":\"{deviceName}\",\"callerLocalTimeUtc\":\"{callerDateTime}\",\"calleeLocalTimeUtc\":\"{calleeDateTime}\"}}";
+
+            if(random.Next(1000) == 100)
+            {
+                record.level = "Error";
+            }
+
             return record;
         }
 
@@ -83,6 +90,10 @@ namespace EventHubSender
             record.durationMs = random.Next(1, 1000).ToString();
             record.correlationId = "00-8cd869a412459a25f5b4f31311223344-0144d2590aacd909-01";
             record.properties = $"{{\"isRoutingEnabled\":\"true\",\"parentSpanId\":\"{parentSpanId}\"}}";
+            if (random.Next(1000) == 100)
+            {
+                record.level = "Error";
+            }
             return record;
         }
 
@@ -93,6 +104,10 @@ namespace EventHubSender
             record.durationMs = random.Next(1, 1000).ToString();
             record.correlationId = "00-8cd869a412459a25f5b4f31311223344-0144d2590aacd909-01";
             record.properties = $"{{\"endpointType\":\"EventHub\",\"endpointName\":\"{endpointName}\",\"parentSpanId\":\"349810a9bbd28730\"}}";
+            if (random.Next(1000) == 100)
+            {
+                record.level = "Error";
+            }
             return record;
         }
 
