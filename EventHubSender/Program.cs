@@ -55,6 +55,7 @@ namespace EventHubSender
         static readonly string eventHubName = "insights-logs-e2ediagnostics";
         static string[] endpointNames = new string[] { "myEndpoint1", "myEndpoint2", "myEndpoint3" };
         static string[] deviceNames = new string[] { "myDevice1", "myDevice2", "myDevice3" };
+        static string[] serviceNames = new string[] { "thirdPartyService1", "thirdPartyService2", "thirdPartyService3" };
         static Random random = new Random();
 
         static void Main(string[] args)
@@ -69,6 +70,7 @@ namespace EventHubSender
             record.operationName = "DiagnosticIoTHubD2C";
             record.durationMs = "";
             record.correlationId = $"00-8cd869a412459a25f5b4f31311223344-{spanId}-01";
+            record.time = DateTime.Now.ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'");
 
             var callerDateTime = DateTime.Now.ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'");
             var calleeDateTime = (DateTime.Now.AddMilliseconds(random.Next(500, 1000))).ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'");
@@ -89,6 +91,8 @@ namespace EventHubSender
             record.operationName = "DiagnosticIoTHubIngress";
             record.durationMs = random.Next(1, 1000).ToString();
             record.correlationId = "00-8cd869a412459a25f5b4f31311223344-0144d2590aacd909-01";
+            record.time = DateTime.Now.ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'");
+
             record.properties = $"{{\"isRoutingEnabled\":\"true\",\"parentSpanId\":\"{parentSpanId}\"}}";
             if (random.Next(1000) == 100)
             {
@@ -103,7 +107,46 @@ namespace EventHubSender
             record.operationName = "DiagnosticIoTHubEgress";
             record.durationMs = random.Next(1, 1000).ToString();
             record.correlationId = "00-8cd869a412459a25f5b4f31311223344-0144d2590aacd909-01";
+            record.time = DateTime.Now.ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'");
+
             record.properties = $"{{\"endpointType\":\"EventHub\",\"endpointName\":\"{endpointName}\",\"parentSpanId\":\"349810a9bbd28730\"}}";
+            if (random.Next(1000) == 100)
+            {
+                record.level = "Error";
+            }
+            return record;
+        }
+
+        static Record GenerateThirdPartyD2CLogs(string serviceName, string endpointName, string spanId)
+        {
+            var record = new Record();
+            record.operationName = "ThirdPartyServiceD2CLog";
+            record.durationMs = random.Next(1, 1000).ToString();
+            record.correlationId = $"00-8cd869a412459a25f5b4f31311223344-{spanId}-01";
+            record.time = DateTime.Now.ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'");
+
+            var callerDateTime = DateTime.Now.ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'");
+            var calleeDateTime = (DateTime.Now.AddMilliseconds(random.Next(500, 1000))).ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'");
+
+            record.properties = $"{{\"messageSize\":\"1000\", \"endpointName\":\"{endpointName}\",\"thirdPartyServiceName\":\"{serviceName}\",\"callerLocalTimeUtc\":\"{callerDateTime}\",\"calleeLocalTimeUtc\":\"{calleeDateTime}\"}}";
+
+            if (random.Next(1000) == 100)
+            {
+                record.level = "Error";
+            }
+
+            return record;
+        }
+
+        static Record GenerateThirdPartyIngressLogs(string parentSpanId, string serviceName)
+        {
+            var record = new Record();
+            record.operationName = "ThirdPartyServiceIngressLog";
+            record.durationMs = random.Next(1, 1000).ToString();
+            record.correlationId = "00-8cd869a412459a25f5b4f31311223344-0144d2590aacd909-01";
+            record.time = DateTime.Now.ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'");
+
+            record.properties = $"{{\"isRoutingEnabled\":\"true\",\"thirdPartyServiceName\":\"{serviceName}\",\"parentSpanId\":\"{parentSpanId}\"}}";
             if (random.Next(1000) == 100)
             {
                 record.level = "Error";
@@ -113,7 +156,7 @@ namespace EventHubSender
 
         static void SendRandomLogs(EventHubClient eventHubClient)
         {
-            var rand = random.Next(1, 3);
+            var rand = random.Next(1, 4);
 
             var eventhubMessage = new EventHubMessage();
             string message = "";
@@ -136,6 +179,24 @@ namespace EventHubSender
                 var randPointName = endpointNames[random.Next(endpointNames.Length)];
                 var egressLog = GenerateEgressLogs(randPointName);
                 eventhubMessage.records.Add(egressLog);
+                message = JsonConvert.SerializeObject(eventhubMessage);
+            }
+            else if(rand == 3)
+            {
+                var bytes = new byte[8];
+                random.NextBytes(bytes);
+                var spanId = ByteArrayToHexStringConverter.Convert(bytes);
+
+                var randIndex = random.Next(deviceNames.Length);
+                var randEndpoint = endpointNames[randIndex];
+                var randService = serviceNames[randIndex];
+
+                var thirdPartyServiceD2CLog = GenerateThirdPartyD2CLogs(randService,randEndpoint,spanId);
+                var thirdPartyServiceIngressLog = GenerateThirdPartyIngressLogs(spanId, randService);
+
+                eventhubMessage.records.Add(thirdPartyServiceD2CLog);
+                eventhubMessage.records.Add(thirdPartyServiceIngressLog);
+
                 message = JsonConvert.SerializeObject(eventhubMessage);
             }
 
